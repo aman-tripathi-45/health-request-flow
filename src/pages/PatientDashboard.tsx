@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Search, 
   Calendar, 
@@ -28,8 +28,14 @@ import { useNavigate } from 'react-router-dom';
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appointmentForm, setAppointmentForm] = useState({
+    date: '',
+    timeSlot: '',
+    reason: ''
+  });
 
   const [doctors] = useState([
     {
@@ -67,7 +73,7 @@ const PatientDashboard = () => {
     }
   ]);
 
-  const [appointments] = useState([
+  const [appointments, setAppointments] = useState([
     {
       id: 1,
       doctorName: 'Dr. Sarah Wilson',
@@ -94,7 +100,50 @@ const PatientDashboard = () => {
   );
 
   const handleBookAppointment = (doctor: any, timeSlot: string) => {
+    if (!appointmentForm.date || !timeSlot) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a date and time slot.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newAppointment = {
+      id: appointments.length + 1,
+      doctorName: doctor.name,
+      specialization: doctor.specialization,
+      date: appointmentForm.date,
+      time: timeSlot,
+      status: 'pending',
+      type: 'Consultation',
+      reason: appointmentForm.reason
+    };
+
+    setAppointments([...appointments, newAppointment]);
+    
+    toast({
+      title: "Appointment Request Sent!",
+      description: `Your appointment request with ${doctor.name} has been submitted successfully.`,
+      variant: "default"
+    });
+
+    // Reset form
+    setAppointmentForm({ date: '', timeSlot: '', reason: '' });
     console.log(`Booking appointment with ${doctor.name} at ${timeSlot}`);
+  };
+
+  const handleConfirmBooking = (doctor: any) => {
+    if (!appointmentForm.timeSlot) {
+      toast({
+        title: "Please Select Time",
+        description: "Please select a time slot before confirming.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    handleBookAppointment(doctor, appointmentForm.timeSlot);
   };
 
   return (
@@ -212,7 +261,12 @@ const PatientDashboard = () => {
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label>Date</Label>
-                                <Input type="date" min={new Date().toISOString().split('T')[0]} />
+                                <Input 
+                                  type="date" 
+                                  min={new Date().toISOString().split('T')[0]} 
+                                  value={appointmentForm.date}
+                                  onChange={(e) => setAppointmentForm({...appointmentForm, date: e.target.value})}
+                                />
                               </div>
                               <div className="space-y-2">
                                 <Label>Consultation Fee</Label>
@@ -225,9 +279,9 @@ const PatientDashboard = () => {
                                 {doctor.availability.map((slot) => (
                                   <Button
                                     key={slot}
-                                    variant="outline"
+                                    variant={appointmentForm.timeSlot === slot ? "default" : "outline"}
                                     className="justify-center"
-                                    onClick={() => handleBookAppointment(doctor, slot)}
+                                    onClick={() => setAppointmentForm({...appointmentForm, timeSlot: slot})}
                                   >
                                     <Clock className="h-4 w-4 mr-2" />
                                     {slot}
@@ -237,15 +291,24 @@ const PatientDashboard = () => {
                             </div>
                             <div className="space-y-2">
                               <Label>Reason for Visit (Optional)</Label>
-                              <Textarea placeholder="Please describe your symptoms or reason for the appointment..." />
+                              <Textarea 
+                                placeholder="Please describe your symptoms or reason for the appointment..."
+                                value={appointmentForm.reason}
+                                onChange={(e) => setAppointmentForm({...appointmentForm, reason: e.target.value})}
+                              />
                             </div>
                             <div className="flex justify-end space-x-2">
                               <DialogTrigger asChild>
                                 <Button variant="outline">Cancel</Button>
                               </DialogTrigger>
-                              <Button className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
-                                Confirm Booking
-                              </Button>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                                  onClick={() => handleConfirmBooking(doctor)}
+                                >
+                                  Confirm Booking
+                                </Button>
+                              </DialogTrigger>
                             </div>
                           </div>
                         </DialogContent>

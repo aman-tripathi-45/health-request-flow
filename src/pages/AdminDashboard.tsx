@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Shield, 
   Users, 
@@ -24,8 +25,9 @@ import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const [pendingRequests] = useState([
+  const [pendingRequests, setPendingRequests] = useState([
     {
       id: 1,
       patientName: 'Sarah Johnson',
@@ -61,7 +63,7 @@ const AdminDashboard = () => {
     }
   ]);
 
-  const [doctors] = useState([
+  const [doctors, setDoctors] = useState([
     {
       id: 1,
       name: 'Dr. Sarah Wilson',
@@ -103,19 +105,59 @@ const AdminDashboard = () => {
   });
 
   const handleApproveRequest = (id: number) => {
-    console.log(`Approved appointment request ${id}`);
+    const request = pendingRequests.find(req => req.id === id);
+    if (request) {
+      setPendingRequests(prev => prev.filter(req => req.id !== id));
+      toast({
+        title: "Request Approved",
+        description: `Appointment between ${request.patientName} and ${request.doctorName} has been approved.`,
+        variant: "default"
+      });
+      console.log(`Approved appointment request ${id}`);
+    }
   };
 
   const handleRejectRequest = (id: number) => {
-    console.log(`Rejected appointment request ${id}`);
+    const request = pendingRequests.find(req => req.id === id);
+    if (request) {
+      setPendingRequests(prev => prev.filter(req => req.id !== id));
+      toast({
+        title: "Request Rejected",
+        description: `Appointment request between ${request.patientName} and ${request.doctorName} has been rejected.`,
+        variant: "destructive"
+      });
+      console.log(`Rejected appointment request ${id}`);
+    }
   };
 
   const handleActivateDoctor = (id: number) => {
-    console.log(`Activated doctor ${id}`);
+    const doctor = doctors.find(doc => doc.id === id);
+    if (doctor) {
+      setDoctors(prev => prev.map(doc => 
+        doc.id === id ? { ...doc, status: 'active', verified: true } : doc
+      ));
+      toast({
+        title: "Doctor Activated",
+        description: `${doctor.name} has been activated and can now accept appointments.`,
+        variant: "default"
+      });
+      console.log(`Activated doctor ${id}`);
+    }
   };
 
   const handleDeactivateDoctor = (id: number) => {
-    console.log(`Deactivated doctor ${id}`);
+    const doctor = doctors.find(doc => doc.id === id);
+    if (doctor) {
+      setDoctors(prev => prev.map(doc => 
+        doc.id === id ? { ...doc, status: 'pending' } : doc
+      ));
+      toast({
+        title: "Doctor Deactivated",
+        description: `${doctor.name} has been deactivated and cannot accept new appointments.`,
+        variant: "destructive"
+      });
+      console.log(`Deactivated doctor ${id}`);
+    }
   };
 
   return (
@@ -181,7 +223,7 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending Requests</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingRequests}</p>
+                  <p className="text-2xl font-bold text-gray-900">{pendingRequests.length}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-orange-600" />
               </div>
@@ -227,67 +269,77 @@ const AdminDashboard = () => {
             </div>
 
             <div className="grid gap-4">
-              {pendingRequests.map((request) => (
-                <Card key={request.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-4">
-                            <Avatar>
-                              <AvatarFallback>{request.patientName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-semibold text-gray-900">
-                                {request.patientName} (Age: {request.patientAge})
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                Requesting appointment with {request.doctorName}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="ml-12 space-y-1">
-                            <p className="text-sm"><strong>Type:</strong> {request.type}</p>
-                            <p className="text-sm"><strong>Date & Time:</strong> {request.date} at {request.time}</p>
-                            <p className="text-sm"><strong>Reason:</strong> {request.reason}</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-orange-600 border-orange-200">
-                          Pending Review
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View Details
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                          onClick={() => handleApproveRequest(request.id)}
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => handleRejectRequest(request.id)}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                      </div>
-                    </div>
+              {pendingRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No pending requests</h3>
+                    <p className="text-gray-600">All appointment requests have been processed.</p>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                pendingRequests.map((request) => (
+                  <Card key={request.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-4">
+                              <Avatar>
+                                <AvatarFallback>{request.patientName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h3 className="font-semibold text-gray-900">
+                                  {request.patientName} (Age: {request.patientAge})
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  Requesting appointment with {request.doctorName}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="ml-12 space-y-1">
+                              <p className="text-sm"><strong>Type:</strong> {request.type}</p>
+                              <p className="text-sm"><strong>Date & Time:</strong> {request.date} at {request.time}</p>
+                              <p className="text-sm"><strong>Reason:</strong> {request.reason}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-orange-600 border-orange-200">
+                            Pending Review
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            onClick={() => handleApproveRequest(request.id)}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => handleRejectRequest(request.id)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
