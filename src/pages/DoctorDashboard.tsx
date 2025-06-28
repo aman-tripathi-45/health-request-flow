@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,10 +21,13 @@ import {
   Bell
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
-  const [appointments] = useState([
+  const { toast } = useToast();
+  
+  const [appointments, setAppointments] = useState([
     {
       id: 1,
       patientName: 'Sarah Johnson',
@@ -63,11 +65,30 @@ const DoctorDashboard = () => {
   });
 
   const handleAcceptAppointment = (id: number) => {
-    console.log(`Accepted appointment ${id}`);
+    setAppointments(prev => prev.map(apt => 
+      apt.id === id ? { ...apt, status: 'accepted' } : apt
+    ));
+    
+    const appointment = appointments.find(apt => apt.id === id);
+    console.log(`Approved appointment request ${id}`);
+    
+    toast({
+      title: "Appointment Accepted",
+      description: `Successfully accepted appointment with ${appointment?.patientName}`,
+    });
   };
 
   const handleRejectAppointment = (id: number) => {
+    setAppointments(prev => prev.filter(apt => apt.id !== id));
+    
+    const appointment = appointments.find(apt => apt.id === id);
     console.log(`Rejected appointment ${id}`);
+    
+    toast({
+      title: "Appointment Rejected",
+      description: `Rejected appointment with ${appointment?.patientName}`,
+      variant: "destructive"
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,24 +174,32 @@ const DoctorDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-green-600 border-green-200 hover:bg-green-50"
-                            onClick={() => handleAcceptAppointment(appointment.id)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Accept
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => handleRejectAppointment(appointment.id)}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
+                          {appointment.status === 'pending' ? (
+                            <>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                onClick={() => handleAcceptAppointment(appointment.id)}
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Accept
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => handleRejectAppointment(appointment.id)}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </>
+                          ) : (
+                            <Badge variant="outline" className="text-green-600 border-green-200">
+                              Accepted
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </CardContent>
